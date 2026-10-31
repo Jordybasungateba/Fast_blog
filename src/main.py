@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette import status
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from schemas import PostCreate, PostResponse
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -58,18 +59,33 @@ def post_detail(request: Request, post_id: int):
 
 
 #  -------------------------API route --------------------------------
-@app.get("/api/posts")
+@app.get("/api/posts", response_model=list[PostResponse])
 def get_posts():
     return posts 
 
 
-@app.get("/api/posts/{post_id}", status_code=status.HTTP_200_OK)
+@app.get("/api/posts/{post_id}", status_code=status.HTTP_200_OK, response_model=PostResponse)
 def get_post_api(post_id: int):
     for post in posts:
         if post.get('id') == post_id:
             return post
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found") 
 
+
+
+@app.post("/api/posts/create", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
+def create_post(post: PostCreate):
+    new_id =  max(p['id'] for p in posts)+1 if posts else 1
+    new_post = {
+        "id": new_id,
+        "author": post.author,
+        "title": post.title,
+        "content": post.content,
+        "date_posted":"april 23, 2025"
+    }
+
+    posts.append(new_post)
+    return new_post
 
 # ----------------------Execption -----------------------------
 @app.exception_handler(StarletteHTTPException)
@@ -96,8 +112,6 @@ def general_http_exception_handler(request: Request, exception: StarletteHTTPExc
         },
         status_code=exception.status_code,
     )
-
-
 
 
 @app.exception_handler(RequestValidationError)
